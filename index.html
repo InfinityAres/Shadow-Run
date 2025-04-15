@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow the Hedgehog Run</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .game-board {
+            width: 100%;
+            height: 500px;
+            border-bottom: 15px solid #e9bd86;
+            margin:0 auto;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(#87CEEB, #E0F6FF);
+        }
+
+        .pedra {
+            position: absolute;
+            bottom: -9px;
+            width: 120px;
+            right: -80px;
+        }
+
+        .shadow {
+            width: 160px;
+            position: absolute;
+            bottom: -32px;
+            left: 100px;
+        }    
+
+        .jump {
+            animation: jump 700ms ease-out;
+        }
+
+        .sol {
+            position: absolute;
+            width: 250px;
+            bottom: 360px;
+        }
+
+        .eggman {
+            width: 120px;
+            bottom: 290px;
+            position: absolute;
+            animation: eggman-animation 10s infinite linear;
+        }
+        
+        #gameOverScreen {
+            position: fixed; /* Alterado de absolute para fixed */
+            top: 50%; /* Posiciona no centro vertical */
+            left: 50%; /* Posiciona no centro horizontal */
+            transform: translate(-50%, -50%); /* Centraliza precisamente */
+            color: white;
+            text-align: center;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            z-index: 100; /* Garante que fique acima de outros elementos */
+        }
+        
+        #restartButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #restartButton:hover {
+            background-color: #45a049;
+        }
+        
+        #keyHint {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        #scoreDisplay {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #FFD700;
+        }
+        
+        @keyframes jump {
+            0% {
+                bottom: 0-32px;
+            }
+            40% {
+                bottom: 180px;
+            }
+            50% {
+                bottom: 180px;
+            }
+            60% {
+                bottom: 180px;
+            }
+            100% {
+                bottom: -32px;
+            }
+                
+        }
+         @keyframes eggman-animation {
+            from {
+                left: -10%
+    
+            }
+            to {
+                left: 100%;
+            }
+         }
+    </style>
+</head>
+<body>
+    <div class="game-board">
+        <img src = "./images/eggman.webp" class ="eggman">
+        <img src="./images/sol.png" class="sol">
+        <img src="./images/shadow.webp" class="shadow">
+        <img src="./images/pedra.png" class="pedra">
+    </div>
+    
+    <!-- Movi a tela de game over para fora do game-board -->
+    <div id="gameOverScreen">
+        <h1>GAME OVER</h1>
+        <p id="scoreDisplay">Score: 0</p>
+        <button id="restartButton">Play Again</button>
+        <p id="keyHint">Press R to restart</p>
+    </div>
+
+    <script>
+        // Elementos do jogo
+        const shadow = document.querySelector('.shadow');
+        const pedra = document.querySelector('.pedra');
+        const gameBoard = document.querySelector('.game-board');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const restartButton = document.getElementById('restartButton');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const keyHint = document.getElementById('keyHint');
+        
+        // Variáveis do jogo
+        let score = 0;
+        let gameActive = true;
+        let animationId;
+        let gameSpeed = 15;
+        let isJumping = false;
+        let pedraPosition = -80;
+        
+        // Função para pular
+        function jump() {
+            if (!isJumping && gameActive) {
+                isJumping = true;
+                shadow.classList.add('jump');
+                
+                // Remove a classe de pulo quando a animação terminar
+                setTimeout(() => {
+                    shadow.classList.remove('jump');
+                    isJumping = false;
+                }, 700);
+            }
+        }
+        
+        // Controles
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameActive) {
+                jump();
+            }
+            
+            // Tecla R para reiniciar
+            if (e.key.toLowerCase() === 'r' && !gameActive) {
+                restartGame();
+            }
+        });
+        
+        restartButton.addEventListener('click', restartGame);
+        
+        // Verificação de colisão
+        function checkCollision() {
+            const shadowRect = shadow.getBoundingClientRect();
+            const pedraRect = pedra.getBoundingClientRect();
+            
+            // Ajuste para tornar a detecção de colisão mais precisa
+            return (
+                shadowRect.right > pedraRect.left + 20 &&
+                shadowRect.left < pedraRect.right - 20 &&
+                shadowRect.bottom > pedraRect.top + 10
+            );
+        }
+        
+        // Movimento do obstáculo
+        function movePedra() {
+            if (!gameActive) return;
+            
+            pedraPosition += gameSpeed;
+            pedra.style.right = pedraPosition + 'px';
+            
+            // Se a pedra sair da tela, reposiciona e aumenta o score
+            if (pedraPosition > gameBoard.offsetWidth + 80) {
+                pedraPosition = -80;
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                
+                // Aumenta a dificuldade a cada 5 pontos
+                if (score % 5 === 0) {
+                    gameSpeed += 3.0;
+                }
+            }
+            
+            // Verifica colisão apenas se a pedra estiver na tela
+            if (pedraPosition > 0 && pedraPosition < gameBoard.offsetWidth) {
+                if (checkCollision() && gameActive) {
+                    gameOver();
+                }
+            }
+        }
+        
+        // Game Over
+        function gameOver() {
+            gameActive = false;
+            gameOverScreen.style.display = 'block';
+            gameOverScreen.style.opacity = 0;
+            
+            // Animação de fade-in
+            let opacity = 0;
+            const fadeIn = setInterval(() => {
+                opacity += 0.05;
+                gameOverScreen.style.opacity = opacity;
+                if (opacity >= 1) clearInterval(fadeIn);
+            }, 30);
+        }
+        
+        // Reiniciar jogo
+        function restartGame() {
+            gameActive = true;
+            score = 0;
+            gameSpeed = 15;
+            pedraPosition = -80;
+            pedra.style.right = '-80px';
+            shadow.style.bottom = '-32px';
+
+            // Remove qualquer animação de pulo pendente
+            shadow.classList.remove('jump');
+            isJumping = false;
+            
+            gameOverScreen.style.display = 'none';
+            scoreDisplay.textContent = `Score: ${score}`;
+            
+            // Reinicia o loop do jogo
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            gameLoop();
+        }
+        
+        // Loop principal do jogo
+        function gameLoop() {
+            if (gameActive) {
+                movePedra();
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // Inicia o jogo
+        gameLoop();
+    </script>
+</body>
+</html>
